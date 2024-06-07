@@ -115,7 +115,7 @@ func WithContext(ctx context.Context) Option {
 
 func (c *ClientImpl) Create(api.VmConfig) (*api.VmInfo, error) {
 	config := api.VmConfig{}
-	_, err := c.apiClient.CreateVM(c.context, config, nil)
+	_, err := c.apiClient.CreateVM(c.context, config)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (c *ClientImpl) Create(api.VmConfig) (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Boot() (*api.VmInfo, error) {
-	_, err := c.apiClient.BootVM(c.context, nil)
+	_, err := c.apiClient.BootVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (c *ClientImpl) Boot() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Pause() (*api.VmInfo, error) {
-	_, err := c.apiClient.PauseVM(c.context, nil)
+	_, err := c.apiClient.PauseVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *ClientImpl) Pause() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Resume() (*api.VmInfo, error) {
-	_, err := c.apiClient.ResumeVM(c.context, nil)
+	_, err := c.apiClient.ResumeVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (c *ClientImpl) Resume() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Snapshot(config api.VmSnapshotConfig) error {
-	_, err := c.apiClient.PutVmSnapshot(c.context, config, nil)
+	_, err := c.apiClient.PutVmSnapshot(c.context, config)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (c *ClientImpl) Snapshot(config api.VmSnapshotConfig) error {
 }
 
 func (c *ClientImpl) Restore(config api.RestoreConfig) error {
-	_, err := c.apiClient.PutVmRestore(c.context, config, nil)
+	_, err := c.apiClient.PutVmRestore(c.context, config)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (c *ClientImpl) Restore(config api.RestoreConfig) error {
 }
 
 func (c *ClientImpl) Reboot() (*api.VmInfo, error) {
-	_, err := c.apiClient.RebootVM(c.context, nil)
+	_, err := c.apiClient.RebootVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (c *ClientImpl) Reboot() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) PowerButton() (*api.VmInfo, error) {
-	_, err := c.apiClient.PowerButtonVM(c.context, nil)
+	_, err := c.apiClient.PowerButtonVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (c *ClientImpl) PowerButton() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Shutdown() (*api.VmInfo, error) {
-	_, err := c.apiClient.ShutdownVM(c.context, nil)
+	_, err := c.apiClient.ShutdownVM(c.context)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (c *ClientImpl) Shutdown() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Delete() error {
-	_, err := c.apiClient.DeleteVM(c.context, nil)
+	_, err := c.apiClient.DeleteVM(c.context)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (c *ClientImpl) Delete() error {
 }
 
 func (c *ClientImpl) Info() (*api.VmInfo, error) {
-	resp, err := c.apiClient.GetVmInfo(c.context, nil)
+	resp, err := c.apiClient.GetVmInfo(c.context)
 	if err != nil {
 		return nil, err
 	}
