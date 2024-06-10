@@ -6,7 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/instruqt/cloudhypervisor-go-sdk/api"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
 )
 
 type Option func(*ClientImpl) error

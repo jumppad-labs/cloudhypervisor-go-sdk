@@ -1,4 +1,4 @@
-module github.com/instruqt/cloudhypervisor-go-sdk
+module github.com/jumppad-labs/cloudhypervisor-go-sdk
 
 go 1.21.5
 
