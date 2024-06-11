@@ -145,7 +145,7 @@ func (m *MachineImpl) startVMM() error {
 	return nil
 }
 
-func (m *MachineImpl) waitForSocket(timeout time.Duration, exit chan error) error {
+func (m *MachineImpl) waitForSocket(timeout time.Duration, exitCh chan error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	ticker := time.NewTicker(10 * time.Millisecond)
@@ -159,16 +159,14 @@ func (m *MachineImpl) waitForSocket(timeout time.Duration, exit chan error) erro
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-exit:
+		case err := <-exitCh:
 			return err
-		default:
-			err := m.ping()
-			if err == nil {
-				return err
+		case <-ticker.C:
+			if _, err := os.Stat(defaultSocket); err != nil {
+				continue
 			}
 
-			m.logger.Debug("waiting for vmm to be ready")
-			time.Sleep(1 * time.Second)
+			return nil
 		}
 	}
 }
