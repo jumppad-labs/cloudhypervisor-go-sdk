@@ -1,5 +1,5 @@
-package: api
+package: client
 generate:
   client: true
   models: true
-output: api/cloud-hypervisor.gen.go
+output: client/cloud-hypervisor.gen.go
