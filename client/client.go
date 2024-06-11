@@ -3,10 +3,15 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
+	"os/exec"
 
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/types"
 )
 
 type Option func(*ClientImpl) error
@@ -17,18 +22,18 @@ const (
 )
 
 type Client interface {
-	Create(api.VmConfig) (*api.VmInfo, error)
-	Boot() (*api.VmInfo, error)
-	Pause() (*api.VmInfo, error)
-	Resume() (*api.VmInfo, error)
-	Snapshot(api.VmSnapshotConfig) error
-	Restore(api.RestoreConfig) error
-	Reboot() (*api.VmInfo, error)
-	PowerButton() (*api.VmInfo, error)
-	Shutdown() (*api.VmInfo, error)
+	Create(config types.Config) (*types.VM, error)
+	Boot() (*types.VM, error)
+	Pause() (*types.VM, error)
+	Resume() (*types.VM, error)
+	Snapshot(destination string) error
+	Restore(source string) error
+	Reboot() (*types.VM, error)
+	PowerButton() (*types.VM, error)
+	Shutdown() (*types.VM, error)
 	Delete() error
-	Info() (*api.VmInfo, error)
-	Ping() (*api.VmmPingResponse, error)
+	Info() (*types.VM, error)
+	Ping() error
 }
 
 type ClientImpl struct {
@@ -40,6 +45,25 @@ type ClientImpl struct {
 }
 
 func NewClient() (Client, error) {
+	path, err := exec.LookPath("cloud-hypervisor")
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		cmd := exec.Command(path, "--api-socket", defaultSocket)
+		stdErr, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Println(string(stdErr))
+			log.Fatal(err)
+		}
+
+		waitErr := cmd.Wait()
+		if err != nil {
+			log.Fatal(waitErr)
+		}
+	}()
+
 	unixClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -113,14 +137,18 @@ func WithContext(ctx context.Context) Option {
 	}
 }
 
-func (c *ClientImpl) Create(api.VmConfig) (*api.VmInfo, error) {
-	config := api.VmConfig{}
-	_, err := c.apiClient.CreateVM(c.context, config)
+func (c *ClientImpl) Create(config types.Config) (*types.VM, error) {
+
+	cfg := api.VmConfig{}
+	resp, err := c.apiClient.CreateVM(c.context, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: check for 204
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("could not create vm: %s", string(body))
+	}
 
 	info, err := c.Info()
 	if err != nil {
@@ -130,7 +158,7 @@ func (c *ClientImpl) Create(api.VmConfig) (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) Boot() (*api.VmInfo, error) {
+func (c *ClientImpl) Boot() (*types.VM, error) {
 	_, err := c.apiClient.BootVM(c.context)
 	if err != nil {
 		return nil, err
@@ -146,7 +174,7 @@ func (c *ClientImpl) Boot() (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) Pause() (*api.VmInfo, error) {
+func (c *ClientImpl) Pause() (*types.VM, error) {
 	_, err := c.apiClient.PauseVM(c.context)
 	if err != nil {
 		return nil, err
@@ -162,7 +190,7 @@ func (c *ClientImpl) Pause() (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) Resume() (*api.VmInfo, error) {
+func (c *ClientImpl) Resume() (*types.VM, error) {
 	_, err := c.apiClient.ResumeVM(c.context)
 	if err != nil {
 		return nil, err
@@ -178,7 +206,8 @@ func (c *ClientImpl) Resume() (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) Snapshot(config api.VmSnapshotConfig) error {
+func (c *ClientImpl) Snapshot(destination string) error {
+	config := api.VmSnapshotConfig{}
 	_, err := c.apiClient.PutVmSnapshot(c.context, config)
 	if err != nil {
 		return err
@@ -187,7 +216,8 @@ func (c *ClientImpl) Snapshot(config api.VmSnapshotConfig) error {
 	return nil
 }
 
-func (c *ClientImpl) Restore(config api.RestoreConfig) error {
+func (c *ClientImpl) Restore(source string) error {
+	config := api.RestoreConfig{}
 	_, err := c.apiClient.PutVmRestore(c.context, config)
 	if err != nil {
 		return err
@@ -196,7 +226,7 @@ func (c *ClientImpl) Restore(config api.RestoreConfig) error {
 	return nil
 }
 
-func (c *ClientImpl) Reboot() (*api.VmInfo, error) {
+func (c *ClientImpl) Reboot() (*types.VM, error) {
 	_, err := c.apiClient.RebootVM(c.context)
 	if err != nil {
 		return nil, err
@@ -212,7 +242,7 @@ func (c *ClientImpl) Reboot() (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) PowerButton() (*api.VmInfo, error) {
+func (c *ClientImpl) PowerButton() (*types.VM, error) {
 	_, err := c.apiClient.PowerButtonVM(c.context)
 	if err != nil {
 		return nil, err
@@ -228,7 +258,7 @@ func (c *ClientImpl) PowerButton() (*api.VmInfo, error) {
 	return info, nil
 }
 
-func (c *ClientImpl) Shutdown() (*api.VmInfo, error) {
+func (c *ClientImpl) Shutdown() (*types.VM, error) {
 	_, err := c.apiClient.ShutdownVM(c.context)
 	if err != nil {
 		return nil, err
@@ -245,42 +275,61 @@ func (c *ClientImpl) Shutdown() (*api.VmInfo, error) {
 }
 
 func (c *ClientImpl) Delete() error {
-	_, err := c.apiClient.DeleteVM(c.context)
+	resp, err := c.apiClient.DeleteVM(c.context)
 	if err != nil {
 		return err
 	}
 
-	// TODO: check for 204
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("could not delete vm: %s", string(body))
+	}
 
 	return nil
 }
 
-func (c *ClientImpl) Info() (*api.VmInfo, error) {
+func (c *ClientImpl) Info() (*types.VM, error) {
 	resp, err := c.apiClient.GetVmInfo(c.context)
 	if err != nil {
 		return nil, err
 	}
 
-	var info *api.VmInfo
-	err = json.NewDecoder(resp.Body).Decode(info)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("could not get vm info: %s", string(body))
+	}
+
+	info := api.VmInfo{}
+	err = json.NewDecoder(resp.Body).Decode(&info)
 	if err != nil {
 		return nil, err
 	}
 
-	return info, nil
+	config := types.VmConfigToConfig(info.Config)
+
+	vm := &types.VM{
+		Config: config,
+	}
+
+	return vm, nil
 }
 
-func (c *ClientImpl) Ping() (*api.VmmPingResponse, error) {
+func (c *ClientImpl) Ping() error {
 	resp, err := c.apiClient.GetVmmPing(c.context)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var ping *api.VmmPingResponse
-	err = json.NewDecoder(resp.Body).Decode(ping)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("could not ping vm manager: %s", string(body))
+	}
+
+	ping := api.VmmPingResponse{}
+	err = json.NewDecoder(resp.Body).Decode(&ping)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return ping, nil
+	return nil
 }
