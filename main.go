@@ -3,7 +3,9 @@ package main
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen --config=config.yaml https://raw.githubusercontent.com/cloud-hypervisor/cloud-hypervisor/master/vmm/src/api/openapi/cloud-hypervisor.yaml
 
 import (
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/types"
@@ -15,6 +17,15 @@ func main() {
 	vm, err := client.NewClient()
 	if err != nil {
 		panic(err)
+	}
+
+	for {
+		if err = vm.Ping(); err == nil {
+			break
+		}
+
+		fmt.Println("waiting for vmm to be ready")
+		time.Sleep(1 * time.Second)
 	}
 
 	ip := "192.168.10.10"
@@ -58,12 +69,33 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("VM created successfully")
 	pretty.Println(info)
 
-	vm.Boot()
-
-	err = vm.Ping()
+	_, err = vm.Boot()
 	if err != nil {
 		panic(err)
 	}
+
+	for {
+		info, err = vm.Info()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("VM state: %s\n", info.State)
+		if info.State == types.VMStateRunning {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	fmt.Println("VM is running")
+	pretty.Println(info)
+
+	// err = vm.Ping()
+	// if err != nil {
+	// 	panic(err)
+	// }
 }

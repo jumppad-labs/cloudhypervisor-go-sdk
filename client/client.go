@@ -159,12 +159,16 @@ func (c *ClientImpl) Create(config types.Config) (*types.VM, error) {
 }
 
 func (c *ClientImpl) Boot() (*types.VM, error) {
-	_, err := c.apiClient.BootVM(c.context)
+	resp, err := c.apiClient.BootVM(c.context)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: check for 204, 404
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("could not boot vm: %s", string(body))
+	}
 
 	info, err := c.Info()
 	if err != nil {
@@ -305,13 +309,9 @@ func (c *ClientImpl) Info() (*types.VM, error) {
 		return nil, err
 	}
 
-	config := types.VmConfigToConfig(info.Config)
+	vm := types.VmInfoToVM(&info)
 
-	vm := &types.VM{
-		Config: config,
-	}
-
-	return vm, nil
+	return &vm, nil
 }
 
 func (c *ClientImpl) Ping() error {

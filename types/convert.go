@@ -28,30 +28,36 @@ func VmConfigToConfig(vmConfig api.VmConfig) Config {
 		},
 	}
 
-	for _, disk := range *vmConfig.Disks {
-		config.Disks = append(config.Disks, DiskConfig{
-			Direct:   disk.Direct,
-			ID:       disk.Id,
-			Path:     disk.Path,
-			Readonly: disk.Readonly,
-		})
+	if vmConfig.Disks != nil {
+		for _, disk := range *vmConfig.Disks {
+			config.Disks = append(config.Disks, DiskConfig{
+				Direct:   disk.Direct,
+				ID:       disk.Id,
+				Path:     disk.Path,
+				Readonly: disk.Readonly,
+			})
+		}
 	}
 
-	for _, network := range *vmConfig.Net {
-		config.Network = append(config.Network, NetworkConfig{
-			ID:   network.Id,
-			IP:   network.Ip,
-			MAC:  network.Mac,
-			Mask: network.Mask,
-			Tap:  network.Tap,
-		})
+	if vmConfig.Net != nil {
+		for _, network := range *vmConfig.Net {
+			config.Network = append(config.Network, NetworkConfig{
+				ID:   network.Id,
+				IP:   network.Ip,
+				MAC:  network.Mac,
+				Mask: network.Mask,
+				Tap:  network.Tap,
+			})
+		}
 	}
 
-	for _, device := range *vmConfig.Devices {
-		config.Devices = append(config.Devices, DeviceConfig{
-			ID:   device.Id,
-			Path: device.Path,
-		})
+	if vmConfig.Devices != nil {
+		for _, device := range *vmConfig.Devices {
+			config.Devices = append(config.Devices, DeviceConfig{
+				ID:   device.Id,
+				Path: device.Path,
+			})
+		}
 	}
 
 	if vmConfig.Console != nil {
