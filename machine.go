@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
 )
 
@@ -42,19 +43,23 @@ type MachineImpl struct {
 	startOnce sync.Once
 	exitCh    chan struct{}
 	fatalErr  error
+	logger    *log.Logger
 }
 
 func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
+	logger := log.New(os.Stderr)
+	logger.SetLevel(log.DebugLevel)
+
 	path, err := exec.LookPath("cloud-hypervisor")
 	if err != nil {
 		return nil, err
 	}
 
 	cmd := exec.CommandContext(ctx, path, "--api-socket", defaultSocket)
-	stdErr, err := cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Println(string(stdErr))
-		log.Fatal(err)
+		logger.Error(err)
+		logger.Error(string(output))
 	}
 
 	unixClient := &http.Client{
@@ -76,6 +81,7 @@ func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
 		cmd:     cmd,
 		config:  config,
 		exitCh:  make(chan struct{}),
+		logger:  logger,
 	}, nil
 }
 
@@ -101,6 +107,8 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		m.fatalErr = err
 		close(m.exitCh)
 	}
+
+	m.logger.Debug("vmm is ready")
 
 	// // create vm
 	// resp, err := m.client.CreateVM(m.context, m.config)
@@ -159,7 +167,7 @@ func (m *MachineImpl) waitForSocket(timeout time.Duration, exit chan error) erro
 				return err
 			}
 
-			log.Println("waiting for vmm to be ready")
+			m.logger.Debug("waiting for vmm to be ready")
 			time.Sleep(1 * time.Second)
 		}
 	}
