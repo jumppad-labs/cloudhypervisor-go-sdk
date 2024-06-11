@@ -64,13 +64,26 @@ func main() {
 		},
 	}
 
-	info, err := vm.Create(config)
+	_, err = vm.Create(config)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("VM created successfully")
-	pretty.Println(info)
+	for {
+		createInfo, err := vm.Info()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("VM state: %s\n", createInfo.State)
+		if createInfo.State == types.VMStateCreated {
+			fmt.Println("VM created successfully")
+			pretty.Println(createInfo)
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 
 	_, err = vm.Boot()
 	if err != nil {
@@ -78,21 +91,20 @@ func main() {
 	}
 
 	for {
-		info, err = vm.Info()
+		bootInfo, err := vm.Info()
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("VM state: %s\n", info.State)
-		if info.State == types.VMStateRunning {
+		fmt.Printf("VM state: %s\n", bootInfo.State)
+		if bootInfo.State == types.VMStateRunning {
+			fmt.Println("VM is running")
+			pretty.Println(bootInfo)
 			break
 		}
 
 		time.Sleep(1 * time.Second)
 	}
-
-	fmt.Println("VM is running")
-	pretty.Println(info)
 
 	// err = vm.Ping()
 	// if err != nil {
