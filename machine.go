@@ -417,5 +417,14 @@ func (m *MachineImpl) AddCloudInitDisk(ctx context.Context) error {
 		return err
 	}
 
+	disks := *m.config.Disks
+	if disks == nil {
+		disks = []client.DiskConfig{}
+	}
+	disks = append(disks, client.DiskConfig{
+		Path: destination,
+	})
+	m.config.Disks = &disks
+
 	return nil
 }

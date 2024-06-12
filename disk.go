@@ -24,6 +24,8 @@ func folderSize(path string) (int64, error) {
 		return err
 	})
 
+	// figure out what the minimum size for an ISO9660 disk is.
+	// 10MB works but we could perhaps use less.
 	var diskSize int64 = 10 * 1024 * 1024
 	if size < diskSize {
 		size = diskSize
