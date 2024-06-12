@@ -13,7 +13,15 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
+	// "github.com/kdomanski/iso9660"
 )
+
+// TODO: set up networking
+// TODO: handle signals
+// TODO: set up vm/vmm logging
+// TODO: set up vm/vmm metrics
+// TODO: create overlayfs disk
+// TODO: create cloudinit disk
 
 type Option func(*MachineImpl) error
 
@@ -273,12 +281,27 @@ func (m *MachineImpl) PowerButton(ctx context.Context) error {
 }
 
 func (m *MachineImpl) Shutdown(ctx context.Context) error {
-	_, err := m.client.ShutdownVM(m.context)
+	resp, err := m.client.ShutdownVM(m.context)
 	if err != nil {
 		return err
 	}
 
 	// TODO: check for 204, 404, 405
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("could not shutdown vm: %s", string(body))
+	}
+
+	resp, err = m.client.ShutdownVMM(m.context)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("could not shutdown vmm: %s", string(body))
+	}
+
 	return nil
 }
 
@@ -325,9 +348,61 @@ func (m *MachineImpl) Wait(ctx context.Context) error {
 }
 
 func (m *MachineImpl) Version(ctx context.Context) (string, error) {
-	return "", nil
+	resp, err := m.client.GetVmmPing(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("could not get vmm info: %s", string(body))
+	}
+
+	info, err := client.ParseGetVmmPingResponse(resp)
+	if err != nil {
+		return "", err
+	}
+
+	return info.JSON200.Version, nil
 }
 
 func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
-	return nil, nil
+	resp, err := m.client.GetVmInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("could not get vm info: %s", string(body))
+	}
+
+	info, err := client.ParseGetVmInfoResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return info.JSON200, nil
+}
+
+func (m *MachineImpl) AddOverlayDisk() error {
+	// check if machine is already running ... cant add disk then.
+	createOverlayDisk()
+	return nil
+}
+func (m *MachineImpl) AddCloudInitDisk() error {
+	source, err := os.MkdirTemp("", "cloudinit-*")
+	if err != nil {
+		return err
+	}
+
+	// check if machine is already running ... cant add disk then.
+	// TODO: generate source files?
+	destination := ""
+	err = createISO9660Disk(source, "cidata", destination)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
