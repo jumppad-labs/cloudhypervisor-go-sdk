@@ -23,6 +23,12 @@ func folderSize(path string) (int64, error) {
 		}
 		return err
 	})
+
+	var diskSize int64 = 10 * 1024 * 1024
+	if size < diskSize {
+		size = diskSize
+	}
+
 	return size, err
 }
 
