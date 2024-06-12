@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -42,6 +43,8 @@ type Machine interface {
 	Shutdown(ctx context.Context) error
 	Wait(ctx context.Context) error
 	Info(ctx context.Context) (*client.VmInfo, error)
+	AddCloudInitDisk(ctx context.Context) error
+	AddOverlayDisk(ctx context.Context) error
 }
 
 type MachineImpl struct {
@@ -385,12 +388,12 @@ func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
 	return info.JSON200, nil
 }
 
-func (m *MachineImpl) AddOverlayDisk() error {
+func (m *MachineImpl) AddOverlayDisk(ctx context.Context) error {
 	// check if machine is already running ... cant add disk then.
 	createOverlayDisk()
 	return nil
 }
-func (m *MachineImpl) AddCloudInitDisk() error {
+func (m *MachineImpl) AddCloudInitDisk(ctx context.Context) error {
 	source, err := os.MkdirTemp("", "cloudinit-*")
 	if err != nil {
 		return err
@@ -398,7 +401,7 @@ func (m *MachineImpl) AddCloudInitDisk() error {
 
 	// check if machine is already running ... cant add disk then.
 	// TODO: generate source files?
-	destination := ""
+	destination, _ := filepath.Abs("cloudinit.iso")
 	err = createISO9660Disk(source, "cidata", destination)
 	if err != nil {
 		return err

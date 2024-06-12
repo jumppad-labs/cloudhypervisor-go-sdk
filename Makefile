@@ -4,7 +4,7 @@ generate:
 	go mod tidy
 	
 build:
-	go build -o bin/
+	go build -o bin/cloudhypervisor-go-sdk examples/main.go
 
 run:
 	sudo $(PWD)/bin/cloudhypervisor-go-sdk

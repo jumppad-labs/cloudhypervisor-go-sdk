@@ -17,12 +17,12 @@ func main() {
 	mac := "12:34:56:78:90:01"
 	tap := "tap0"
 
-	kernel, err := filepath.Abs("hypervisor-fw")
+	kernel, err := filepath.Abs("examples/files/hypervisor-fw")
 	if err != nil {
 		panic(err)
 	}
 
-	disk, err := filepath.Abs("focal-server-cloudimg-amd64.raw")
+	disk, err := filepath.Abs("examples/files/focal-server-cloudimg-amd64.raw")
 	if err != nil {
 		panic(err)
 	}
@@ -55,6 +55,11 @@ func main() {
 
 	ctx := context.Background()
 	machine, err := sdk.NewMachine(ctx, config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = machine.AddCloudInitDisk(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
