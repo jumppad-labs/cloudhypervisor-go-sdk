@@ -399,6 +399,16 @@ func (m *MachineImpl) AddCloudInitDisk(ctx context.Context) error {
 		return err
 	}
 
+	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte("instance-id: iid-local01\nlocal-hostname: cloudimg"), 0644)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(source, "user-data"), []byte("#cloud-config\npassword: passw0rd\nchpasswd: { expire: False }\nssh_pwauth: True"), 0644)
+	if err != nil {
+		return err
+	}
+
 	// check if machine is already running ... cant add disk then.
 	// TODO: generate source files?
 	destination, _ := filepath.Abs("cloudinit.iso")
