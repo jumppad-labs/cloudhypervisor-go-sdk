@@ -62,4 +62,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	err = machine.Wait(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
