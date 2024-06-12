@@ -1,3 +1,5 @@
+generate:
+	go generate -v
 build:
 	go build -o bin/
 
