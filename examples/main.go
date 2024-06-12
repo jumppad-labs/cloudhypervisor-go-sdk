@@ -7,6 +7,7 @@ import (
 	"log"
 	"path/filepath"
 
+	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
 )
 
@@ -16,12 +17,12 @@ func main() {
 	mac := "12:34:56:78:90:01"
 	tap := "tap0"
 
-	kernel, err := filepath.Abs("examples/hypervisor-fw")
+	kernel, err := filepath.Abs("hypervisor-fw")
 	if err != nil {
 		panic(err)
 	}
 
-	disk, err := filepath.Abs("examples/focal-server-cloudimg-amd64.raw")
+	disk, err := filepath.Abs("focal-server-cloudimg-amd64.raw")
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +54,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	machine, err := NewMachine(ctx, config)
+	machine, err := sdk.NewMachine(ctx, config)
 	if err != nil {
 		log.Fatal(err)
 	}
