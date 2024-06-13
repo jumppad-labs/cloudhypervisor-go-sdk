@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
 )
 
 func main() {
@@ -64,29 +65,28 @@ func main() {
 		panic(err)
 	}
 
-	config := sdk.Config{
-		Kernel: sdk.KernelConfig{
-			Path: &kernel,
+	config := client.VmConfig{
+		Payload: client.PayloadConfig{
+			Kernel: &kernel,
 		},
-		Disks: []sdk.DiskConfig{
+		Disks: &[]client.DiskConfig{
 			{
 				Path: disk,
 			},
 		},
-		Network: []sdk.NetworkConfig{
+		Net: &[]client.NetConfig{
 			{
-				IpAddress:     &ip,
-				MacAddress:    &mac,
-				Mask:          &mask,
-				HostInterface: &tap,
-				Gateway:       &gateway,
+				Ip:   &ip,
+				Mac:  &mac,
+				Mask: &mask,
+				Tap:  &tap,
 			},
 		},
-		CPU: sdk.CPUConfig{
+		Cpus: &client.CpusConfig{
 			BootVcpus: 1,
 			MaxVcpus:  1,
 		},
-		Memory: sdk.MemoryConfig{
+		Memory: &client.MemoryConfig{
 			Size: 1024 * 1000 * 1000,
 		},
 	}

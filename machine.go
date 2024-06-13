@@ -57,18 +57,17 @@ type Machine interface {
 }
 
 type MachineImpl struct {
-	context       context.Context
-	client        *client.Client
-	cmd           *exec.Cmd
-	config        Config
-	machineConfig client.VmConfig
-	startOnce     sync.Once
-	exitCh        chan struct{}
-	fatalErr      error
-	logger        *log.Logger
+	context   context.Context
+	client    *client.Client
+	cmd       *exec.Cmd
+	config    client.VmConfig
+	startOnce sync.Once
+	exitCh    chan struct{}
+	fatalErr  error
+	logger    *log.Logger
 }
 
-func NewMachine(ctx context.Context, config Config) (Machine, error) {
+func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
 	logger := log.New(os.Stdout)
 	logger.SetLevel(log.DebugLevel)
 
@@ -209,7 +208,7 @@ func (m *MachineImpl) waitForSocket(timeout time.Duration, exitCh chan error) er
 }
 
 func (m *MachineImpl) createVM() error {
-	resp, err := m.client.CreateVM(m.context, m.machineConfig)
+	resp, err := m.client.CreateVM(m.context, m.config)
 	if err != nil {
 		return err
 	}

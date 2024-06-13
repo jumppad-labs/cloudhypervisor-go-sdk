@@ -14,6 +14,8 @@ func CreateCloudInitDisk(hostname string, password string, mac string, cidr stri
 		return err
 	}
 
+	fmt.Println(source)
+
 	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte(fmt.Sprintf("instance-id: %s\nlocal-hostname: %s", hostname, hostname)), 0644)
 	if err != nil {
 		return err
@@ -32,7 +34,7 @@ func CreateCloudInitDisk(hostname string, password string, mac string, cidr stri
 	// check if machine is already running ... cant add disk then.
 	// TODO: generate source files?
 	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
-	err = createISO9660Disk(source, "cidata", destination)
+	err = createISO9660Disk(source+"/", "cidata", destination)
 	if err != nil {
 		return err
 	}

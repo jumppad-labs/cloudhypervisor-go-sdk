@@ -1,8 +1,6 @@
 package sdk
 
 import (
-	"encoding/json"
-
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
 )
 
@@ -33,18 +31,7 @@ If we are changing our config further away from the client.VmConfig,
 we need to change this function.
 */
 func (c *Config) ToVmConfig() (client.VmConfig, error) {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return client.VmConfig{}, err
-	}
 
-	var vmConfig client.VmConfig
-	err = json.Unmarshal(b, &vmConfig)
-	if err != nil {
-		return client.VmConfig{}, err
-	}
-
-	return vmConfig, nil
 }
 
 type KernelConfig struct {
