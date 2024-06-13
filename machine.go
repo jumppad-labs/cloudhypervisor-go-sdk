@@ -14,7 +14,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
-	// "github.com/kdomanski/iso9660"
 )
 
 // TODO: set up networking
@@ -22,8 +21,21 @@ import (
 // TODO: set up vm/vmm logging
 // TODO: set up vm/vmm metrics
 // TODO: create overlayfs disk
-// TODO: create cloudinit disk
+// TODO: virtio-fs /var/lib/docker/overlay2 to mount docker images into guest
 
+/*
+# set the kernel boot args to use overlay-init
+"boot_args": "console=ttyS0 reboot=k panic=1 pci=off overlay_root=vdb init=/sbin/overlay-init"
+  - overlay_root: the disk that is the overlay root
+  - init: override the default init program to set up the overlay filesystem
+
+# create read only filesystem
+sudo mkdir -p $MOUNTDIR/overlay/root $MOUNTDIR/overlay/work $MOUNTDIR/mnt $MOUNTDIR/rom
+sudo cp files/overlay-init $MOUNTDIR/sbin/overlay-init
+sudo mksquashfs $MOUNTDIR $SQUASHFS -noappend
+
+https://github.com/cloud-hypervisor/cloud-hypervisor/blob/main/docs/custom-image.md
+*/
 type Option func(*MachineImpl) error
 
 const (
@@ -399,19 +411,49 @@ func (m *MachineImpl) AddCloudInitDisk(ctx context.Context) error {
 		return err
 	}
 
+	/*
+		instance-id: cloud
+		local-hostname: cloud
+	*/
 	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte("instance-id: iid-local01\nlocal-hostname: cloudimg"), 0644)
 	if err != nil {
 		return err
 	}
 
+	/*
+		#cloud-config
+		users:
+			- name: cloud
+				passwd: $6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K.
+				sudo: ALL=(ALL) NOPASSWD:ALL
+				lock_passwd: False
+				inactive: False
+				shell: /bin/bash
+
+		ssh_pwauth: True
+	*/
 	err = os.WriteFile(filepath.Join(source, "user-data"), []byte("#cloud-config\npassword: passw0rd\nchpasswd: { expire: False }\nssh_pwauth: True"), 0644)
+	if err != nil {
+		return err
+	}
+
+	/*
+		version: 2
+		ethernets:
+			ens4:
+				match:
+					macaddress: 12:34:56:78:90:ab
+				addresses: [192.168.249.2/24]
+				gateway4: 192.168.249.1
+	*/
+	err = os.WriteFile(filepath.Join(source, "network-config"), []byte("version: 2\n	ethernets:\n		ens4:\n			match:\n				macaddress: 12:34:56:78:90:ab\n			addresses: [192.168.249.2/24]\n			gateway4: 192.168.249.1"), 0644)
 	if err != nil {
 		return err
 	}
 
 	// check if machine is already running ... cant add disk then.
 	// TODO: generate source files?
-	destination, _ := filepath.Abs("cloudinit.iso")
+	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
 	err = createISO9660Disk(source, "cidata", destination)
 	if err != nil {
 		return err

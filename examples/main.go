@@ -17,6 +17,7 @@ func main() {
 	mac := "12:34:56:78:90:01"
 	tap := "tap0"
 
+	// use this firmware if no kernel is specified
 	kernel, err := filepath.Abs("examples/files/hypervisor-fw")
 	if err != nil {
 		panic(err)
