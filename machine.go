@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -55,22 +54,21 @@ type Machine interface {
 	Shutdown(ctx context.Context) error
 	Wait(ctx context.Context) error
 	Info(ctx context.Context) (*client.VmInfo, error)
-	AddCloudInitDisk(ctx context.Context) error
-	AddOverlayDisk(ctx context.Context) error
 }
 
 type MachineImpl struct {
-	context   context.Context
-	client    *client.Client
-	cmd       *exec.Cmd
-	config    client.VmConfig
-	startOnce sync.Once
-	exitCh    chan struct{}
-	fatalErr  error
-	logger    *log.Logger
+	context       context.Context
+	client        *client.Client
+	cmd           *exec.Cmd
+	config        Config
+	machineConfig client.VmConfig
+	startOnce     sync.Once
+	exitCh        chan struct{}
+	fatalErr      error
+	logger        *log.Logger
 }
 
-func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
+func NewMachine(ctx context.Context, config Config) (Machine, error) {
 	logger := log.New(os.Stdout)
 	logger.SetLevel(log.DebugLevel)
 
@@ -93,6 +91,11 @@ func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: validate config
+	// err = config.Validate()
+
+	// TODO: convert config to vm config
 
 	return &MachineImpl{
 		context: ctx,
@@ -206,7 +209,7 @@ func (m *MachineImpl) waitForSocket(timeout time.Duration, exitCh chan error) er
 }
 
 func (m *MachineImpl) createVM() error {
-	resp, err := m.client.CreateVM(m.context, m.config)
+	resp, err := m.client.CreateVM(m.context, m.machineConfig)
 	if err != nil {
 		return err
 	}
@@ -398,75 +401,4 @@ func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
 	}
 
 	return info.JSON200, nil
-}
-
-func (m *MachineImpl) AddOverlayDisk(ctx context.Context) error {
-	// check if machine is already running ... cant add disk then.
-	createOverlayDisk()
-	return nil
-}
-func (m *MachineImpl) AddCloudInitDisk(ctx context.Context) error {
-	source, err := os.MkdirTemp("", "cloudinit-*")
-	if err != nil {
-		return err
-	}
-
-	/*
-		instance-id: cloud
-		local-hostname: cloud
-	*/
-	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte("instance-id: iid-local01\nlocal-hostname: cloudimg"), 0644)
-	if err != nil {
-		return err
-	}
-
-	/*
-		#cloud-config
-		users:
-			- name: cloud
-				passwd: $6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K.
-				sudo: ALL=(ALL) NOPASSWD:ALL
-				lock_passwd: False
-				inactive: False
-				shell: /bin/bash
-
-		ssh_pwauth: True
-	*/
-	err = os.WriteFile(filepath.Join(source, "user-data"), []byte("#cloud-config\npassword: passw0rd\nchpasswd: { expire: False }\nssh_pwauth: True"), 0644)
-	if err != nil {
-		return err
-	}
-
-	/*
-		version: 2
-		ethernets:
-			ens4:
-				match:
-					macaddress: 12:34:56:78:90:ab
-				addresses: [192.168.249.2/24]
-				gateway4: 192.168.249.1
-	*/
-	err = os.WriteFile(filepath.Join(source, "network-config"), []byte("version: 2\n	ethernets:\n		ens4:\n			match:\n				macaddress: 12:34:56:78:90:ab\n			addresses: [192.168.249.2/24]\n			gateway4: 192.168.249.1"), 0644)
-	if err != nil {
-		return err
-	}
-
-	// check if machine is already running ... cant add disk then.
-	// TODO: generate source files?
-	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
-	err = createISO9660Disk(source, "cidata", destination)
-	if err != nil {
-		return err
-	}
-
-	disks := *m.config.Disks
-	if disks == nil {
-		disks = []client.DiskConfig{}
-	}
-	disks = append(disks, client.DiskConfig{
-		Path: destination,
-	})
-	m.config.Disks = &disks
-
-	return nil
 }

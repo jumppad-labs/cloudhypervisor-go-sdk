@@ -1,112 +1,44 @@
 package sdk
 
 import (
+	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/kdomanski/iso9660"
 )
 
-func folderSize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
+func CreateCloudInitDisk(hostname string, password string, mac string, cidr string, gateway string, userdata string) error {
+	source, err := os.MkdirTemp("", "cloudinit-*")
+	if err != nil {
 		return err
-	})
-
-	// figure out what the minimum size for an ISO9660 disk is.
-	// 10MB works but we could perhaps use less.
-	var diskSize int64 = 10 * 1024 * 1024
-	if size < diskSize {
-		size = diskSize
 	}
 
-	return size, err
+	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte(fmt.Sprintf("instance-id: %s\nlocal-hostname: %s", hostname, hostname)), 0644)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(source, "user-data"), []byte(userdata), 0644)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(source, "network-config"), []byte(fmt.Sprintf("version: 2\n	ethernets:\n		ens4:\n			match:\n				macaddress: %s\n			addresses: [%s]\n			gateway4: %s", mac, cidr, gateway)), 0644)
+	if err != nil {
+		return err
+	}
+
+	// check if machine is already running ... cant add disk then.
+	// TODO: generate source files?
+	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
+	err = createISO9660Disk(source, "cidata", destination)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
-
-// func createISO9660Disk(source string, label string, destination string) error {
-// 	folderSize, err := folderSize(source)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	var LogicalBlocksize diskfs.SectorSize = 2048
-// 	mydisk, err := diskfs.Create(destination, folderSize, diskfs.Raw, LogicalBlocksize)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	fspec := disk.FilesystemSpec{
-// 		Partition:   0,
-// 		FSType:      filesystem.TypeISO9660,
-// 		VolumeLabel: label,
-// 	}
-// 	fs, err := mydisk.CreateFilesystem(fspec)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		relPath, err := filepath.Rel(source, path)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		if info.IsDir() {
-// 			err = fs.Mkdir(relPath)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			return nil
-// 		}
-
-// 		if !info.IsDir() {
-// 			rw, err := fs.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
-// 			if err != nil {
-// 				return err
-// 			}
-
-// 			in, errorOpeningFile := os.Open(path)
-// 			if errorOpeningFile != nil {
-// 				return errorOpeningFile
-// 			}
-// 			defer in.Close()
-
-// 			_, err = io.Copy(rw, in)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-
-// 		return nil
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	iso, ok := fs.(*iso9660.FileSystem)
-// 	if !ok {
-// 		if err != nil {
-// 			return fmt.Errorf("not an iso9660 filesystem")
-// 		}
-// 	}
-// 	err = iso.Finalize(iso9660.FinalizeOptions{})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func createISO9660Disk(source string, label string, destination string) error {
 	writer, err := iso9660.NewWriter()
@@ -115,79 +47,71 @@ func createISO9660Disk(source string, label string, destination string) error {
 	}
 	defer writer.Cleanup()
 
-	output, err := os.MkdirTemp("", "cloudinit-*")
+	err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return fmt.Errorf("directories are not supported")
+		}
+
+		relativePath, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		err = writer.AddFile(file, relativePath)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 
-	metadataSource := path.Join(source, "meta-data")
-	metadata, err := os.ReadFile(metadataSource)
-	if err != nil {
-		return err
-	}
+	// metadataSource := path.Join(source, "meta-data")
+	// mf, err := os.Open(metadataSource)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer mf.Close()
 
-	metadataDestination := filepath.Join(output, "meta-data")
-	err = os.WriteFile(metadataDestination, []byte(metadata), 0644)
-	if err != nil {
-		return err
-	}
+	// err = writer.AddFile(mf, "meta-data")
+	// if err != nil {
+	// 	return err
+	// }
 
-	mf, err := os.Open(metadataDestination)
-	if err != nil {
-		return err
-	}
-	defer mf.Close()
+	// userdataSource := path.Join(source, "user-data")
+	// uf, err := os.Open(userdataSource)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer uf.Close()
 
-	err = writer.AddFile(mf, "meta-data")
-	if err != nil {
-		return err
-	}
+	// err = writer.AddFile(uf, "user-data")
+	// if err != nil {
+	// 	return err
+	// }
 
-	userdataSource := path.Join(source, "user-data")
-	userdata, err := os.ReadFile(userdataSource)
-	if err != nil {
-		return err
-	}
+	// networkConfigSource := path.Join(source, "user-data")
+	// nf, err := os.Open(networkConfigSource)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer nf.Close()
 
-	userdataDestination := path.Join(output, "user-data")
-	err = os.WriteFile(userdataDestination, []byte(userdata), 0644)
-	if err != nil {
-		return err
-	}
-
-	uf, err := os.Open(userdataDestination)
-	if err != nil {
-		return err
-	}
-	defer uf.Close()
-
-	err = writer.AddFile(uf, "user-data")
-	if err != nil {
-		return err
-	}
-
-	networkConfigSource := path.Join(source, "user-data")
-	networkConfig, err := os.ReadFile(networkConfigSource)
-	if err != nil {
-		return err
-	}
-
-	networkConfigDestination := path.Join(output, "network-config")
-	err = os.WriteFile(networkConfigDestination, []byte(networkConfig), 0644)
-	if err != nil {
-		return err
-	}
-
-	nf, err := os.Open(networkConfigDestination)
-	if err != nil {
-		return err
-	}
-	defer nf.Close()
-
-	err = writer.AddFile(nf, "network-config")
-	if err != nil {
-		return err
-	}
+	// err = writer.AddFile(nf, "network-config")
+	// if err != nil {
+	// 	return err
+	// }
 
 	of, err := os.OpenFile(destination, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
@@ -195,13 +119,9 @@ func createISO9660Disk(source string, label string, destination string) error {
 	}
 	defer of.Close()
 
-	err = writer.WriteTo(of, "cidata")
+	err = writer.WriteTo(of, label)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func createOverlayDisk() error {
 	return nil
 }
