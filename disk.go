@@ -49,71 +49,71 @@ func createISO9660Disk(source string, label string, destination string) error {
 	}
 	defer writer.Cleanup()
 
-	err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
+	// err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		if info.IsDir() {
-			return fmt.Errorf("directories are not supported")
-		}
+	// 	if info.IsDir() {
+	// 		return fmt.Errorf("directories are not supported")
+	// 	}
 
-		relativePath, err := filepath.Rel(source, path)
-		if err != nil {
-			return err
-		}
+	// 	relativePath, err := filepath.Rel(source, path)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
+	// 	file, err := os.Open(path)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		err = writer.AddFile(file, relativePath)
-		if err != nil {
-			return err
-		}
+	// 	err = writer.AddFile(file, relativePath)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		return nil
-	})
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	return err
+	// }
+
+	metadataSource := filepath.Join(source, "meta-data")
+	mf, err := os.Open(metadataSource)
+	if err != nil {
+		return err
+	}
+	defer mf.Close()
+
+	err = writer.AddFile(mf, "meta-data")
 	if err != nil {
 		return err
 	}
 
-	// metadataSource := path.Join(source, "meta-data")
-	// mf, err := os.Open(metadataSource)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer mf.Close()
+	userdataSource := filepath.Join(source, "user-data")
+	uf, err := os.Open(userdataSource)
+	if err != nil {
+		return err
+	}
+	defer uf.Close()
 
-	// err = writer.AddFile(mf, "meta-data")
-	// if err != nil {
-	// 	return err
-	// }
+	err = writer.AddFile(uf, "user-data")
+	if err != nil {
+		return err
+	}
 
-	// userdataSource := path.Join(source, "user-data")
-	// uf, err := os.Open(userdataSource)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer uf.Close()
+	networkConfigSource := filepath.Join(source, "user-data")
+	nf, err := os.Open(networkConfigSource)
+	if err != nil {
+		return err
+	}
+	defer nf.Close()
 
-	// err = writer.AddFile(uf, "user-data")
-	// if err != nil {
-	// 	return err
-	// }
-
-	// networkConfigSource := path.Join(source, "user-data")
-	// nf, err := os.Open(networkConfigSource)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer nf.Close()
-
-	// err = writer.AddFile(nf, "network-config")
-	// if err != nil {
-	// 	return err
-	// }
+	err = writer.AddFile(nf, "network-config")
+	if err != nil {
+		return err
+	}
 
 	of, err := os.OpenFile(destination, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {

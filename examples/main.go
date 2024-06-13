@@ -11,6 +11,7 @@ import (
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
+	"github.com/kr/pretty"
 )
 
 func main() {
@@ -90,6 +91,8 @@ func main() {
 			Size: 1024 * 1000 * 1000,
 		},
 	}
+
+	pretty.Println(config)
 
 	machine, err := sdk.NewMachine(ctx, config)
 	if err != nil {
