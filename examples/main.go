@@ -1,10 +1,7 @@
 package main
 
-//go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen --config=client/config.yaml https://raw.githubusercontent.com/cloud-hypervisor/cloud-hypervisor/master/vmm/src/api/openapi/cloud-hypervisor.yaml
-
 import (
 	"context"
-	"fmt"
 	"log"
 	"path/filepath"
 
@@ -40,28 +37,17 @@ func main() {
 	// use this firmware if no kernel is specified
 	kernel, err := filepath.Abs("examples/files/hypervisor-fw")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	disk, err := filepath.Abs("examples/files/focal-server-cloudimg-amd64.raw")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	userdata := fmt.Sprintf(`#cloud-config
-	users:
-	  - name: %s
-	    passwd: %s
-	    sudo: ALL=(ALL) NOPASSWD:ALL
-	    lock_passwd: False
-	    inactive: False
-	    shell: /bin/bash
-	ssh_pwauth: True
-	`, username, password)
-
-	cloudinit, err := sdk.CreateCloudInitDisk("microvm", "test", mac, cidr, gateway, userdata)
+	cloudinit, err := sdk.CreateCloudInitDisk("microvm", mac, cidr, gateway, username, password)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	config := client.VmConfig{

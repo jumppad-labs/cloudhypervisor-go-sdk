@@ -1,0 +1,10 @@
+#cloud-config
+users:
+  - name: {{username}}
+    passwd: {{password}}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: False
+    inactive: False
+    shell: /bin/bash
+
+ssh_pwauth: True

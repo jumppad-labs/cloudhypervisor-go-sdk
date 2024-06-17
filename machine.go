@@ -18,10 +18,9 @@ import (
 
 // TODO: set up networking
 // TODO: handle signals
-// TODO: set up vm/vmm logging
-// TODO: set up vm/vmm metrics
+// TODO: set up vm/vmm logging -> stderr/stdout?
+// TODO: set up vm/vmm metrics -> get metrics from process?
 // TODO: create overlayfs disk
-// TODO: virtio-fs /var/lib/docker/overlay2 to mount docker images into guest
 
 /*
 # set the kernel boot args to use overlay-init

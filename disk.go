@@ -1,14 +1,25 @@
 package sdk
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/kdomanski/iso9660"
 )
 
-func CreateCloudInitDisk(hostname string, password string, mac string, cidr string, gateway string, userdata string) (string, error) {
+//go:embed configs/meta-data.tmpl
+var metadata string
+
+//go:embed configs/user-data.tmpl
+var userdata string
+
+//go:embed configs/network-config.tmpl
+var networkConfig string
+
+func CreateCloudInitDisk(hostname string, mac string, cidr string, gateway string, username string, password string) (string, error) {
 	source, err := os.MkdirTemp("", "cloudinit-*")
 	if err != nil {
 		return "", err
@@ -16,30 +27,22 @@ func CreateCloudInitDisk(hostname string, password string, mac string, cidr stri
 
 	fmt.Println(source)
 
-	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte(fmt.Sprintf("instance-id: %s\nlocal-hostname: %s", hostname, hostname)), 0644)
+	err = generateMetadata(source, hostname)
 	if err != nil {
 		return "", err
 	}
 
-	err = os.WriteFile(filepath.Join(source, "user-data"), []byte(userdata), 0644)
+	err = generateUserdata(source, username, password)
 	if err != nil {
 		return "", err
 	}
 
-	err = os.WriteFile(filepath.Join(source, "network-config"), []byte(fmt.Sprintf(`version: 2
-	ethernets:
-	  ens4:
-	    match:
-	      macaddress: %s
-	      addresses: [%s]
-	      gateway4: %s
-	`, mac, cidr, gateway)), 0644)
+	err = generateNetworkConfig(source, mac, cidr, gateway)
 	if err != nil {
 		return "", err
 	}
 
 	// check if machine is already running ... cant add disk then.
-	// TODO: generate source files?
 	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
 	err = createISO9660Disk(source, "cidata", destination)
 	if err != nil {
@@ -55,36 +58,6 @@ func createISO9660Disk(source string, label string, destination string) error {
 		return err
 	}
 	defer writer.Cleanup()
-
-	// err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	if info.IsDir() {
-	// 		return fmt.Errorf("directories are not supported")
-	// 	}
-
-	// 	relativePath, err := filepath.Rel(source, path)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	file, err := os.Open(path)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	err = writer.AddFile(file, relativePath)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	return err
-	// }
 
 	metadataSource := filepath.Join(source, "meta-data")
 	mf, err := os.Open(metadataSource)
@@ -132,5 +105,75 @@ func createISO9660Disk(source string, label string, destination string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func generateMetadata(destination string, hostname string) error {
+	tmpl, err := template.New("meta-data").Parse(metadata)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(filepath.Join(destination, "meta-data"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = tmpl.Execute(f, map[string]string{
+		"hostname": hostname,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func generateUserdata(destination string, username string, password string) error {
+	tmpl, err := template.New("user-data").Parse(userdata)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(filepath.Join(destination, "user-data"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = tmpl.Execute(f, map[string]string{
+		"username": username,
+		"password": password,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func generateNetworkConfig(destination string, mac string, cidr string, gateway string) error {
+	tmpl, err := template.New("network-config").Parse(networkConfig)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(filepath.Join(destination, "network-config"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = tmpl.Execute(f, map[string]string{
+		"interface": "ens4",
+		"mac":       mac,
+		"cidr":      cidr,
+		"gateway":   gateway,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
