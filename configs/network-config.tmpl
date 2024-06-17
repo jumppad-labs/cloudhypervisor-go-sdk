@@ -1,7 +1,7 @@
 version: 2
 ethernets:
-  {{interface}}:
+  {{.interface}}:
     match:
-      macaddress: {{mac}}
-    addresses: [{{cidr}}]
-    gateway4: {{gateway}}
+      macaddress: {{.mac}}
+    addresses: [{{.cidr}}]
+    gateway4: {{.gateway}}

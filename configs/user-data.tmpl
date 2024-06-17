@@ -1,7 +1,7 @@
 #cloud-config
 users:
-  - name: {{username}}
-    passwd: {{password}}
+  - name: {{.username}}
+    passwd: {{.password}}
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: False
     inactive: False
