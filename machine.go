@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"time"
 
@@ -38,8 +39,9 @@ https://github.com/cloud-hypervisor/cloud-hypervisor/blob/main/docs/custom-image
 type Option func(*MachineImpl) error
 
 const (
-	defaultSocket = "/tmp/cloud-hypervisor.sock"
-	defaultURL    = "http://localhost/api/v1/"
+	defaultSocket  = "/tmp/cloud-hypervisor.sock"
+	defaultURL     = "http://localhost/api/v1/"
+	virtiofsSocket = "/tmp/virtiofs.sock"
 )
 
 type Machine interface {
@@ -67,17 +69,25 @@ type MachineImpl struct {
 	logger    *log.Logger
 }
 
-func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
-	logger := log.New(os.Stdout)
-	logger.SetLevel(log.DebugLevel)
-
+func newVMMCommand(socket string) (*exec.Cmd, error) {
 	path, err := exec.LookPath("cloud-hypervisor")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, path, "--api-socket", defaultSocket)
+	args := []string{
+		"--api-socket", socket,
+	}
 
+	cmd := exec.Command(path, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd, nil
+}
+
+func newClient() (*client.Client, error) {
 	unixClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -87,6 +97,23 @@ func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
 	}
 
 	client, err := client.NewClient(defaultURL, client.WithHTTPClient(unixClient))
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
+	logger := log.New(os.Stdout)
+	logger.SetLevel(log.DebugLevel)
+
+	cmd, err := newVMMCommand(defaultSocket)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := newClient()
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +172,12 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		close(errCh)
 	}()
 
+	// if there are shared host directories, start virtio-fs
+	if m.config.Fs != nil {
+		m.StartVirtioFS()
+	}
+
+	// wait for vmm to start
 	err = m.waitForSocket(10*time.Second, errCh)
 	if err != nil {
 		m.fatalErr = err
@@ -400,4 +433,52 @@ func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
 	}
 
 	return info.JSON200, nil
+}
+
+func newVirtioFSCommand(socket string, directories []string, threads int) (*exec.Cmd, error) {
+	path, err := exec.LookPath("virtiofsd")
+	if err != nil {
+		return nil, err
+	}
+
+	args := []string{
+		"--socket-path", socket,
+		"--log-level", "debug",
+		"--cache", "never",
+		"--thread-pool-size", strconv.Itoa(threads),
+	}
+
+	for _, dir := range directories {
+		args = append(args, "--shared-dir", dir)
+	}
+
+	cmd := exec.Command(path, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd, nil
+}
+
+func (m *MachineImpl) StartVirtioFS() {
+	directories := []string{"/var/lib/docker/overlay2"}
+	for _, dir := range *m.config.Fs {
+		directories = append(directories, dir.Socket)
+	}
+
+	virtioCh := make(chan error)
+	go func() {
+		virtioCmd, err := newVirtioFSCommand(virtiofsSocket, directories, 4)
+		if err != nil {
+			m.fatalErr = err
+			close(m.exitCh)
+		}
+
+		err = virtioCmd.Start()
+		if err != nil {
+			m.fatalErr = err
+			close(m.exitCh)
+		}
+		virtioCh <- virtioCmd.Wait()
+	}()
 }

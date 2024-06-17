@@ -8,38 +8,45 @@ import (
 	"github.com/kdomanski/iso9660"
 )
 
-func CreateCloudInitDisk(hostname string, password string, mac string, cidr string, gateway string, userdata string) error {
+func CreateCloudInitDisk(hostname string, password string, mac string, cidr string, gateway string, userdata string) (string, error) {
 	source, err := os.MkdirTemp("", "cloudinit-*")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fmt.Println(source)
 
 	err = os.WriteFile(filepath.Join(source, "meta-data"), []byte(fmt.Sprintf("instance-id: %s\nlocal-hostname: %s", hostname, hostname)), 0644)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = os.WriteFile(filepath.Join(source, "user-data"), []byte(userdata), 0644)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	err = os.WriteFile(filepath.Join(source, "network-config"), []byte(fmt.Sprintf("version: 2\n	ethernets:\n		ens4:\n			match:\n				macaddress: %s\n			addresses: [%s]\n			gateway4: %s", mac, cidr, gateway)), 0644)
+	err = os.WriteFile(filepath.Join(source, "network-config"), []byte(fmt.Sprintf(`version: 2
+	ethernets:
+	  ens4:
+	    match:
+	      macaddress: %s
+	      addresses: [%s]
+	      gateway4: %s
+	`, mac, cidr, gateway)), 0644)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// check if machine is already running ... cant add disk then.
 	// TODO: generate source files?
 	destination, _ := filepath.Abs("/tmp/cloudinit.iso")
-	err = createISO9660Disk(source+"/", "cidata", destination)
+	err = createISO9660Disk(source, "cidata", destination)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return destination, nil
 }
 
 func createISO9660Disk(source string, label string, destination string) error {

@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"path/filepath"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
@@ -28,15 +27,15 @@ func main() {
 	gateway := "10.0.5.1"
 	cidr := "10.0.5.0/24"
 	mac := "12:34:56:78:90:01"
-	tap := "tap0"
+	// tap := "tap0"
 
-	address, network, err := net.ParseCIDR(cidr)
-	if err != nil {
-		panic(err)
-	}
+	// address, network, err := net.ParseCIDR(cidr)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	ip := address.String()
-	mask := network.Mask.String()
+	// ip := address.String()
+	// mask := network.Mask.String()
 
 	// use this firmware if no kernel is specified
 	kernel, err := filepath.Abs("examples/files/hypervisor-fw")
@@ -51,17 +50,16 @@ func main() {
 
 	userdata := fmt.Sprintf(`#cloud-config
 	users:
-		- name: %s
-			passwd: %s
-			sudo: ALL=(ALL) NOPASSWD:ALL
-			lock_passwd: False
-			inactive: False
-			shell: /bin/bash
-
+	  - name: %s
+	    passwd: %s
+	    sudo: ALL=(ALL) NOPASSWD:ALL
+	    lock_passwd: False
+	    inactive: False
+	    shell: /bin/bash
 	ssh_pwauth: True
 	`, username, password)
 
-	err = sdk.CreateCloudInitDisk("microvm", "test", mac, cidr, gateway, userdata)
+	cloudinit, err := sdk.CreateCloudInitDisk("microvm", "test", mac, cidr, gateway, userdata)
 	if err != nil {
 		panic(err)
 	}
@@ -74,13 +72,16 @@ func main() {
 			{
 				Path: disk,
 			},
+			{
+				Path: cloudinit,
+			},
 		},
 		Net: &[]client.NetConfig{
 			{
-				Ip:   &ip,
+				Ip:   nil,
 				Mac:  &mac,
-				Mask: &mask,
-				Tap:  &tap,
+				Mask: nil,
+				Tap:  nil,
 			},
 		},
 		Cpus: &client.CpusConfig{
