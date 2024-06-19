@@ -10,4 +10,10 @@ run:
 	sudo $(PWD)/bin/cloudhypervisor-go-sdk
 
 kill:
-	sudo killall cloud-hypervisor
+	sudo rm -rf /tmp/cloudinit* || true
+	sudo rm /dev/serial || true
+	sudo killall cloud-hypervisor || true
+	sudo killall cloudhypervisor-go-sdk || true
+
+disks:
+	examples/files/create-raw-disks.sh

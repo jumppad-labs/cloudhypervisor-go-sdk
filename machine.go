@@ -68,7 +68,7 @@ type MachineImpl struct {
 	logger    *log.Logger
 }
 
-func newVMMCommand(socket string) (*exec.Cmd, error) {
+func newVMMCommand(socket string, logger *log.Logger) (*exec.Cmd, error) {
 	path, err := exec.LookPath("cloud-hypervisor")
 	if err != nil {
 		return nil, err
@@ -76,6 +76,12 @@ func newVMMCommand(socket string) (*exec.Cmd, error) {
 
 	args := []string{
 		"--api-socket", socket,
+	}
+
+	if logger.GetLevel() == log.InfoLevel {
+		args = append(args, "-v")
+	} else if logger.GetLevel() == log.DebugLevel {
+		args = append(args, "-vv")
 	}
 
 	cmd := exec.Command(path, args...)
@@ -103,11 +109,8 @@ func newClient() (*client.Client, error) {
 	return client, nil
 }
 
-func NewMachine(ctx context.Context, config client.VmConfig) (Machine, error) {
-	logger := log.New(os.Stdout)
-	logger.SetLevel(log.DebugLevel)
-
-	cmd, err := newVMMCommand(defaultSocket)
+func NewMachine(ctx context.Context, config client.VmConfig, logger *log.Logger) (Machine, error) {
+	cmd, err := newVMMCommand(defaultSocket, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -171,14 +174,12 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		close(errCh)
 	}()
 
-	// if there are shared host directories, start virtio-fs
-	if m.config.Fs != nil {
-		m.StartVirtioFS()
-	}
+	// m.StartVirtioFS()
 
 	// wait for vmm to start
 	err = m.waitForSocket(10*time.Second, errCh)
 	if err != nil {
+		m.logger.Error(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
@@ -187,12 +188,14 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 
 	err = m.createVM()
 	if err != nil {
+		m.logger.Error(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
 
 	err = m.bootVM()
 	if err != nil {
+		m.logger.Error(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
@@ -469,12 +472,14 @@ func (m *MachineImpl) StartVirtioFS() {
 	go func() {
 		virtioCmd, err := newVirtioFSCommand(virtiofsSocket, directories, 4)
 		if err != nil {
+			m.logger.Error(err)
 			m.fatalErr = err
 			close(m.exitCh)
 		}
 
 		err = virtioCmd.Start()
 		if err != nil {
+			m.logger.Error(err)
 			m.fatalErr = err
 			close(m.exitCh)
 		}

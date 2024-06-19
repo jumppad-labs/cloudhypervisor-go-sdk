@@ -83,7 +83,7 @@ func createISO9660Disk(source string, label string, destination string) error {
 		return err
 	}
 
-	networkConfigSource := filepath.Join(source, "user-data")
+	networkConfigSource := filepath.Join(source, "network-config")
 	nf, err := os.Open(networkConfigSource)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func generateNetworkConfig(destination string, mac string, cidr string, gateway 
 	defer f.Close()
 
 	err = tmpl.Execute(f, map[string]string{
-		"interface": "ens4",
+		"interface": "eth0",
 		"mac":       mac,
 		"cidr":      cidr,
 		"gateway":   gateway,

@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"os"
 	"path/filepath"
+
+	"github.com/charmbracelet/log"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
@@ -13,46 +15,45 @@ import (
 func main() {
 	ctx := context.Background()
 
+	logger := log.New(os.Stdout)
+	logger.SetLevel(log.InfoLevel)
+
 	username := "instruqt"
-	password := "$6$2XC6sDcIdykdJMyp$j0IIMBPLavRisH.bkFbetP18R.a4IyKctUZ6.84Qw/6ADUMQ074Dp01VZIbYVPwe7SmaPEWmuQKM2UCp.I2At."
+	password := "$6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K." // cloud123
 
-	/*
-		cloud123 (512) = $6$SR9/pN.80DvU7P97$ap6rBBaN6GdDaQQUOivGzTahjnANXW6Yzwsu42Eit4GrGResGXbuI28a7rge4G3Qug7NKqujFRWGPHOuKe0cl/
-		cloud123 (???) = $6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K.
-	*/
-
-	gateway := "10.0.5.1"
-	cidr := "10.0.5.0/24"
+	gateway := "192.168.249.1"
+	cidr := "192.168.249.2/24"
 	mac := "12:34:56:78:90:01"
-	// tap := "tap0"
-
-	// address, network, err := net.ParseCIDR(cidr)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// ip := address.String()
-	// mask := network.Mask.String()
 
 	// use this firmware if no kernel is specified
-	kernel, err := filepath.Abs("examples/files/hypervisor-fw")
+	kernel, err := filepath.Abs("examples/files/unpacked/vmlinuz")
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	initrd, err := filepath.Abs("examples/files/unpacked/initrd")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	disk, err := filepath.Abs("examples/files/focal-server-cloudimg-amd64.raw")
+	disk, err := filepath.Abs("examples/files/noble.raw")
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	cloudinit, err := sdk.CreateCloudInitDisk("microvm", mac, cidr, gateway, username, password)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
+
+	args := "root=/dev/vda1 ro console=tty1 console=ttyS0"
+	serial := "/dev/serial"
 
 	config := client.VmConfig{
 		Payload: client.PayloadConfig{
-			Kernel: &kernel,
+			Kernel:    &kernel,
+			Initramfs: &initrd,
+			Cmdline:   &args,
 		},
 		Disks: &[]client.DiskConfig{
 			{
@@ -64,10 +65,7 @@ func main() {
 		},
 		Net: &[]client.NetConfig{
 			{
-				Ip:   nil,
-				Mac:  &mac,
-				Mask: nil,
-				Tap:  nil,
+				Mac: &mac,
 			},
 		},
 		Cpus: &client.CpusConfig{
@@ -75,24 +73,28 @@ func main() {
 			MaxVcpus:  1,
 		},
 		Memory: &client.MemoryConfig{
-			Size: 1024 * 1000 * 1000,
+			Size: 1024 * 1000 * 1000, // 1GB
+		},
+		Serial: &client.ConsoleConfig{
+			Mode: "File",
+			File: &serial,
 		},
 	}
 
 	pretty.Println(config)
 
-	machine, err := sdk.NewMachine(ctx, config)
+	machine, err := sdk.NewMachine(ctx, config, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	err = machine.Start(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	err = machine.Wait(ctx)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 }

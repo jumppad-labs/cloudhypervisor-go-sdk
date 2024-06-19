@@ -1,7 +1,13 @@
 version: 2
+renderer: networkd
 ethernets:
   {{.interface}}:
     match:
-      macaddress: {{.mac}}
-    addresses: [{{.cidr}}]
-    gateway4: {{.gateway}}
+      macaddress: "{{.mac}}"
+    addresses:
+      - "{{.cidr}}"
+    nameservers:
+      addresses: [ "8.8.4.4", "8.8.8.8" ]
+    routes:
+      - to: "0.0.0.0/0"
+        via: "{{.gateway}}"
