@@ -15,5 +15,6 @@ kill:
 	sudo killall cloud-hypervisor || true
 	sudo killall cloudhypervisor-go-sdk || true
 
-disks:
-	examples/files/create-raw-disks.sh
+assets:
+	sudo scripts/download-assets.sh
+	sudo scripts/create-raw-disks.sh

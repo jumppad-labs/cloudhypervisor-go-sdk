@@ -1,12 +1,34 @@
+# Cloud Hypervisor Golang SDK
+
+## Example
+
+Download and prepare assets.
+
 ```shell
-curl -s --unix-socket /tmp/cloud-hypervisor.sock -i \
-  -X PUT 'http://localhost/api/v1/vm.create'  \
-  -H 'Accept: application/json'               \
-  -H 'Content-Type: application/json'         \
-  -d @examples/vmconfig.json
+make assets
 ```
+
+Build the example code.
+
+```shell
+make build
+```
+
+Run the example code.
+
+```shell
+make run
+```
+
+Confirm that the virtual machine is running.
 
 ```shell
 sudo curl -s --unix-socket /tmp/cloud-hypervisor.sock \
   http://localhost/api/v1/vm.info | jq .
+```
+
+Cleanup.
+
+```shell
+make kill
 ```

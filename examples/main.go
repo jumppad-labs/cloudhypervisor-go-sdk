@@ -18,7 +18,7 @@ func main() {
 	logger := log.New(os.Stdout)
 	logger.SetLevel(log.InfoLevel)
 
-	username := "instruqt"
+	username := "jumppad"
 	password := "$6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K." // cloud123
 
 	gateway := "192.168.249.1"
@@ -26,12 +26,12 @@ func main() {
 	mac := "12:34:56:78:90:01"
 
 	// use this firmware if no kernel is specified
-	kernel, err := filepath.Abs("examples/files/unpacked/vmlinuz")
+	kernel, err := filepath.Abs("examples/files/vmlinuz")
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	initrd, err := filepath.Abs("examples/files/unpacked/initrd")
+	initrd, err := filepath.Abs("examples/files/initrd")
 	if err != nil {
 		log.Fatal(err)
 	}

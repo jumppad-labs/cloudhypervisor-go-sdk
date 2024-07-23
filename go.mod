@@ -1,6 +1,6 @@
 module github.com/jumppad-labs/cloudhypervisor-go-sdk
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/charmbracelet/log v0.4.0
