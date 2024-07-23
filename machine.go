@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
 )
 
@@ -78,11 +78,11 @@ func newVMMCommand(socket string, logger *log.Logger) (*exec.Cmd, error) {
 		"--api-socket", socket,
 	}
 
-	if logger.GetLevel() == log.InfoLevel {
-		args = append(args, "-v")
-	} else if logger.GetLevel() == log.DebugLevel {
-		args = append(args, "-vv")
-	}
+	// if logger.GetLevel() == log.InfoLevel {
+	// 	args = append(args, "-v")
+	// } else if logger.GetLevel() == log.DebugLevel {
+	// 	args = append(args, "-vv")
+	// }
 
 	cmd := exec.Command(path, args...)
 	cmd.Stdout = os.Stdout
@@ -151,7 +151,7 @@ func (m *MachineImpl) PID() (int, error) {
 func (m *MachineImpl) Start(ctx context.Context) error {
 	alreadyStarted := true
 	m.startOnce.Do(func() {
-		m.logger.Debug("marking machine as started")
+		m.logger.Println("marking machine as started")
 		alreadyStarted = false
 	})
 	if alreadyStarted {
@@ -179,23 +179,23 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 	// wait for vmm to start
 	err = m.waitForSocket(10*time.Second, errCh)
 	if err != nil {
-		m.logger.Error(err)
+		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
 
-	m.logger.Debug("vmm is ready")
+	m.logger.Println("vmm is ready")
 
 	err = m.createVM()
 	if err != nil {
-		m.logger.Error(err)
+		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
 
 	err = m.bootVM()
 	if err != nil {
-		m.logger.Error(err)
+		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
 	}
@@ -472,14 +472,14 @@ func (m *MachineImpl) StartVirtioFS() {
 	go func() {
 		virtioCmd, err := newVirtioFSCommand(virtiofsSocket, directories, 4)
 		if err != nil {
-			m.logger.Error(err)
+			m.logger.Println(err)
 			m.fatalErr = err
 			close(m.exitCh)
 		}
 
 		err = virtioCmd.Start()
 		if err != nil {
-			m.logger.Error(err)
+			m.logger.Println(err)
 			m.fatalErr = err
 			close(m.exitCh)
 		}

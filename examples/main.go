@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/charmbracelet/log"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
@@ -15,8 +14,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	logger := log.New(os.Stdout)
-	logger.SetLevel(log.InfoLevel)
+	logger := log.New(os.Stdout, "", log.LstdFlags)
 
 	username := "jumppad"
 	password := "$6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K." // cloud123
