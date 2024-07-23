@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
 )
 
 // TODO: set up networking
@@ -54,14 +54,14 @@ type Machine interface {
 	PowerButton(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 	Wait(ctx context.Context) error
-	Info(ctx context.Context) (*client.VmInfo, error)
+	Info(ctx context.Context) (*api.VmInfo, error)
 }
 
 type MachineImpl struct {
 	context   context.Context
-	client    *client.Client
+	client    *api.Client
 	cmd       *exec.Cmd
-	config    client.VmConfig
+	config    api.VmConfig
 	startOnce sync.Once
 	exitCh    chan struct{}
 	fatalErr  error
@@ -92,7 +92,7 @@ func newVMMCommand(socket string, logger *log.Logger) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-func newClient() (*client.Client, error) {
+func newClient() (*api.Client, error) {
 	unixClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -101,7 +101,7 @@ func newClient() (*client.Client, error) {
 		},
 	}
 
-	client, err := client.NewClient(defaultURL, client.WithHTTPClient(unixClient))
+	client, err := api.NewClient(defaultURL, api.WithHTTPClient(unixClient))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func newClient() (*client.Client, error) {
 	return client, nil
 }
 
-func NewMachine(ctx context.Context, config client.VmConfig, logger *log.Logger) (Machine, error) {
+func NewMachine(ctx context.Context, config api.VmConfig, logger *log.Logger) (Machine, error) {
 	cmd, err := newVMMCommand(defaultSocket, logger)
 	if err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func (m *MachineImpl) Resume(ctx context.Context) error {
 }
 
 func (m *MachineImpl) Snapshot(ctx context.Context, destination string) error {
-	config := client.VmSnapshotConfig{}
+	config := api.VmSnapshotConfig{}
 	_, err := m.client.PutVmSnapshot(m.context, config)
 	if err != nil {
 		return err
@@ -302,7 +302,7 @@ func (m *MachineImpl) Snapshot(ctx context.Context, destination string) error {
 }
 
 func (m *MachineImpl) Restore(ctx context.Context, source string) error {
-	config := client.RestoreConfig{}
+	config := api.RestoreConfig{}
 	_, err := m.client.PutVmRestore(m.context, config)
 	if err != nil {
 		return err
@@ -382,7 +382,7 @@ func (m *MachineImpl) ping() error {
 		return fmt.Errorf("could not ping vmm: %s", string(body))
 	}
 
-	_, err = client.ParseGetVmmPingResponse(resp)
+	_, err = api.ParseGetVmmPingResponse(resp)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (m *MachineImpl) Version(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("could not get vmm info: %s", string(body))
 	}
 
-	info, err := client.ParseGetVmmPingResponse(resp)
+	info, err := api.ParseGetVmmPingResponse(resp)
 	if err != nil {
 		return "", err
 	}
@@ -418,7 +418,7 @@ func (m *MachineImpl) Version(ctx context.Context) (string, error) {
 	return info.JSON200.Version, nil
 }
 
-func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
+func (m *MachineImpl) Info(ctx context.Context) (*api.VmInfo, error) {
 	resp, err := m.client.GetVmInfo(ctx)
 	if err != nil {
 		return nil, err
@@ -429,7 +429,7 @@ func (m *MachineImpl) Info(ctx context.Context) (*client.VmInfo, error) {
 		return nil, fmt.Errorf("could not get vm info: %s", string(body))
 	}
 
-	info, err := client.ParseGetVmInfoResponse(resp)
+	info, err := api.ParseGetVmInfoResponse(resp)
 	if err != nil {
 		return nil, err
 	}

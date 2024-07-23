@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
-	"github.com/jumppad-labs/cloudhypervisor-go-sdk/client"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
 	"github.com/kr/pretty"
 )
 
@@ -49,13 +49,13 @@ func main() {
 	args := "root=/dev/vda1 ro console=tty1 console=ttyS0"
 	serial := "/dev/serial"
 
-	config := client.VmConfig{
-		Payload: client.PayloadConfig{
+	config := api.VmConfig{
+		Payload: api.PayloadConfig{
 			Kernel:    &kernel,
 			Initramfs: &initrd,
 			Cmdline:   &args,
 		},
-		Disks: &[]client.DiskConfig{
+		Disks: &[]api.DiskConfig{
 			{
 				Path: disk,
 			},
@@ -63,19 +63,19 @@ func main() {
 				Path: cloudinit,
 			},
 		},
-		Net: &[]client.NetConfig{
+		Net: &[]api.NetConfig{
 			{
 				Mac: &mac,
 			},
 		},
-		Cpus: &client.CpusConfig{
+		Cpus: &api.CpusConfig{
 			BootVcpus: 1,
 			MaxVcpus:  1,
 		},
-		Memory: &client.MemoryConfig{
+		Memory: &api.MemoryConfig{
 			Size: 1024 * 1000 * 1000, // 1GB
 		},
-		Serial: &client.ConsoleConfig{
+		Serial: &api.ConsoleConfig{
 			Mode: "File",
 			File: &serial,
 		},
