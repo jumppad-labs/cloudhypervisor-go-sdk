@@ -79,7 +79,7 @@ func newVMMCommand(socket string, logger *log.Logger) (*exec.Cmd, error) {
 	}
 
 	// if logger.GetLevel() == log.InfoLevel {
-	// 	args = append(args, "-v")
+	args = append(args, "-v")
 	// } else if logger.GetLevel() == log.DebugLevel {
 	// 	args = append(args, "-vv")
 	// }
@@ -182,6 +182,8 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
+
+		return err
 	}
 
 	m.logger.Println("vmm is ready")
@@ -191,6 +193,8 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
+
+		return err
 	}
 
 	err = m.bootVM()
@@ -198,6 +202,8 @@ func (m *MachineImpl) Start(ctx context.Context) error {
 		m.logger.Println(err)
 		m.fatalErr = err
 		close(m.exitCh)
+
+		return err
 	}
 
 	return nil

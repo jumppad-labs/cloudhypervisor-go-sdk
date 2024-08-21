@@ -2,6 +2,12 @@
 
 ## Example
 
+Setup cloud-hypervisor.
+
+```shell
+sudo setcap cap_net_admin+ep $(which cloud-hypervisor)
+```
+
 Download and prepare assets.
 
 ```shell

@@ -7,7 +7,10 @@ build:
 	go build -o bin/cloudhypervisor-go-sdk examples/main.go
 
 run:
-	sudo $(PWD)/bin/cloudhypervisor-go-sdk
+	$(PWD)/bin/cloudhypervisor-go-sdk
+
+clean:
+	rm examples/files/*.raw || true
 
 kill:
 	sudo rm -rf /tmp/cloudinit* || true
@@ -18,3 +21,4 @@ kill:
 assets:
 	sudo scripts/download-assets.sh
 	sudo scripts/create-raw-disks.sh
+	sudo chown -R $(USER) examples/files

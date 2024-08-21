@@ -3,20 +3,18 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"path/filepath"
 
 	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
-	"github.com/kr/pretty"
 )
 
 func main() {
 	ctx := context.Background()
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
+	logger := log.Default()
 
-	username := "jumppad"
+	username := "erik"
 	password := "$6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K." // cloud123
 
 	gateway := "192.168.249.1"
@@ -44,8 +42,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	_ = cloudinit
+
 	args := "root=/dev/vda1 ro console=tty1 console=ttyS0"
-	serial := "/dev/serial"
+	serial := "/tmp/serial"
+
+	// readonly := true
 
 	config := api.VmConfig{
 		Payload: api.PayloadConfig{
@@ -56,10 +58,11 @@ func main() {
 		Disks: &[]api.DiskConfig{
 			{
 				Path: disk,
+				// Readonly: &readonly,
 			},
-			{
-				Path: cloudinit,
-			},
+			// {
+			// 	Path: cloudinit,
+			// },
 		},
 		Net: &[]api.NetConfig{
 			{
@@ -78,8 +81,6 @@ func main() {
 			File: &serial,
 		},
 	}
-
-	pretty.Println(config)
 
 	machine, err := sdk.NewMachine(ctx, config, logger)
 	if err != nil {
