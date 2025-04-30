@@ -1,0 +1,12 @@
+version: 2
+ethernets:
+  ens3:
+    match:
+      macaddress: "12:34:56:78:90:01"
+    addresses:
+      - "10.5.0.11/24"
+    nameservers:
+      addresses: [ "8.8.4.4", "8.8.8.8" ]
+    routes:
+      - to: "0.0.0.0/0"
+        via: "10.5.0.1"

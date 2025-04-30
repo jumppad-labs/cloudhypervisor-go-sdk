@@ -1,4 +1,4 @@
-package sdk
+package machine
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
 )
 
-// TODO: set up networking
 // TODO: handle signals
 // TODO: set up vm/vmm logging -> stderr/stdout?
 // TODO: set up vm/vmm metrics -> get metrics from process?
@@ -109,7 +108,7 @@ func newClient() (*api.Client, error) {
 	return client, nil
 }
 
-func NewMachine(ctx context.Context, config api.VmConfig, logger *log.Logger) (Machine, error) {
+func New(ctx context.Context, config api.VmConfig, logger *log.Logger) (Machine, error) {
 	cmd, err := newVMMCommand(defaultSocket, logger)
 	if err != nil {
 		return nil, err

@@ -10,13 +10,13 @@ import (
 	"github.com/kdomanski/iso9660"
 )
 
-//go:embed configs/meta-data.tmpl
+//go:embed configs/cloud-init/meta-data.tmpl
 var metadata string
 
-//go:embed configs/user-data.tmpl
+//go:embed configs/cloud-init/user-data.tmpl
 var userdata string
 
-//go:embed configs/network-config.tmpl
+//go:embed configs/cloud-init/network-config.tmpl
 var networkConfig string
 
 func CreateCloudInitDisk(hostname string, mac string, cidr string, gateway string, username string, password string) (string, error) {

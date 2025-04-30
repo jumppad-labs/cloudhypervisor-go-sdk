@@ -5,14 +5,21 @@ import (
 	"log"
 	"path/filepath"
 
-	sdk "github.com/jumppad-labs/cloudhypervisor-go-sdk"
 	"github.com/jumppad-labs/cloudhypervisor-go-sdk/api"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/machine"
+	"github.com/jumppad-labs/cloudhypervisor-go-sdk/network"
 )
 
 func main() {
 	ctx := context.Background()
 
 	logger := log.Default()
+
+	nm := network.New()
+	err := nm.Create(ctx, "test")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mac := "12:34:56:78:90:01"
 	tap := "tap0"
@@ -66,17 +73,22 @@ func main() {
 		},
 	}
 
-	machine, err := sdk.NewMachine(ctx, config, logger)
+	vm, err := machine.New(ctx, config, logger)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	err = machine.Start(ctx)
+	err = vm.Start(ctx)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	err = machine.Wait(ctx)
+	err = vm.Wait(ctx)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	err = nm.Destroy(ctx, "test")
 	if err != nil {
 		logger.Fatal(err)
 	}

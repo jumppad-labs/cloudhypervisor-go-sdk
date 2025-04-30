@@ -4,7 +4,10 @@ go 1.21.0
 
 toolchain go1.24.1
 
-require github.com/kdomanski/iso9660 v0.4.0
+require (
+	github.com/containernetworking/cni v1.3.0
+	github.com/kdomanski/iso9660 v0.4.0
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
