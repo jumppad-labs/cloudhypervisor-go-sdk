@@ -57,7 +57,7 @@ func main() {
 		},
 		Disks: &[]api.DiskConfig{
 			{
-				Path: disk,
+				Path: &disk,
 				// Readonly: &readonly,
 			},
 			// {
