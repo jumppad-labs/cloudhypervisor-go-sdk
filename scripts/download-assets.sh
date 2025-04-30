@@ -1,14 +1,12 @@
 #!/bin/bash
-set -x
+set -ex
 
-if [ ! -f examples/files/noble.img ]; then
-  curl -L -o examples/files/noble.img https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img
+mkdir -p examples/files
+
+if [ ! -f examples/files/ubuntu.img ]; then
+  wget -O examples/files/ubuntu.img http://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 fi
 
-if [ ! -f examples/files/initrd ]; then
-  curl -L -o examples/files/initrd.img https://cloud-images.ubuntu.com/releases/noble/release/unpacked/ubuntu-24.04-server-cloudimg-amd64-initrd-generic
-fi
-
-if [ ! -f examples/files/vmlinuz ]; then
-  curl -L -o examples/files/vmlinuz https://cloud-images.ubuntu.com/releases/noble/release/unpacked/ubuntu-24.04-server-cloudimg-amd64-vmlinuz-generic
+if [ ! -f examples/files/vmlinux ]; then
+  wget -O examples/files/vmlinux https://github.com/cloud-hypervisor/linux/releases/download/ch-release-v6.2-20240908/vmlinux
 fi

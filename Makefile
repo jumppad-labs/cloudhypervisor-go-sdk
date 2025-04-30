@@ -6,19 +6,26 @@ generate:
 build:
 	go build -o bin/cloudhypervisor-go-sdk examples/main.go
 
-run:
+run: build disk cloudinit
 	$(PWD)/bin/cloudhypervisor-go-sdk
 
 clean:
-	rm examples/files/*.raw || true
+	sudo rm examples/files/*.raw || true
+	sudo rm /tmp/cloudinit.img || true
+	sudo rm -rf /tmp/cloudinit* || true
 
 kill:
-	sudo rm -rf /tmp/cloudinit* || true
-	sudo rm /dev/serial || true
 	sudo killall cloud-hypervisor || true
 	sudo killall cloudhypervisor-go-sdk || true
 
-assets:
-	sudo scripts/download-assets.sh
-	sudo scripts/create-raw-disks.sh
-	sudo chown -R $(USER) examples/files
+download:
+	scripts/download-assets.sh
+
+disk:
+	scripts/prepare-disks.sh
+
+cloudinit:
+	scripts/prepare-cloud-init.sh
+
+assets: download disk cloudinit
+	

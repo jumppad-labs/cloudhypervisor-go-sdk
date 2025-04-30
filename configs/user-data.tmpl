@@ -1,14 +1,13 @@
 #cloud-config
-bootcmd:
-  - printf "[Resolve]\nDNS=8.8.8.8" > /etc/systemd/resolved.conf
-  - [systemctl, restart, systemd-resolved]
-
+#cloud-config
 users:
-  - name: {{.username}}
-    gecos: "Instruqt"
+  - name: cloud
+    passwd: $6$7125787751a8d18a$sHwGySomUA1PawiNFWVCKYQN.Ec.Wzz0JtPPL1MvzFrkwmop2dq7.4CYf03A5oemPQ4pOFCCrtCelvFBEle/K.
     sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: False
+    inactive: False
     shell: /bin/bash
-    lock_passwd: false
-    passwd: {{.password}}
+
+ssh_pwauth: True
 
 final_message: "The system is finally up, after $UPTIME seconds"
